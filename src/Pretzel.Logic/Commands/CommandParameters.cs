@@ -31,6 +31,8 @@ namespace Pretzel.Logic.Commands
                                     { "p|port=", "The port to test the site locally", p => decimal.TryParse(p, out port) },
                                     { "i|import=", "The import type", v => ImportType = v }, // TODO: necessary?
                                     { "f|file=", "Path to import file", v => ImportPath = v },
+                                    { "l|layout=", "The layout to use", v => LayoutName = v },
+                                    { "n|name=","The title for the post", v => PostTitle = v }
                                 };
         }
 
@@ -45,6 +47,8 @@ namespace Pretzel.Logic.Commands
         public string Template { get; set; }
         public string ImportPath { get; private set; }
         public string ImportType { get; set; }
+        public string LayoutName { get; set; }
+        public string PostTitle { get; set; }
 
         private decimal port;
 
