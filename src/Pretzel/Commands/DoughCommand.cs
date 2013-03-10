@@ -18,7 +18,6 @@ namespace Pretzel.Commands
 #pragma warning disable 649
         [Import] IFileSystem fileSystem;
         [Import] CommandParameters parameters;
-        [Import] SiteContextGenerator contextGenerator;
 #pragma warning restore 649
 
         public void Execute(IEnumerable<string> arguments)
@@ -30,14 +29,14 @@ namespace Pretzel.Commands
             if (Directory.Exists(postsDirectory))
             {
                 var postPath = Path.Combine(postsDirectory, string.Format("{0:yyyy-MM-dd}-{1}.md", DateTime.Now, GetFileSystemFriendlyTitle(parameters.PostTitle)));
-                using (var stream = new StreamWriter(postPath, false, new UTF8Encoding(false)))
-                {
-                    stream.WriteLine("---");
-                    stream.WriteLine("layout: post");
-                    stream.WriteLine("title: {0}", parameters.PostTitle);
-                    stream.WriteLine("---");
-                    stream.WriteLine();
-                }
+                var postContent = new StringBuilder()
+                    .AppendLine("---")
+                    .AppendLine("layout: post")
+                    .AppendFormat("title: {0}", parameters.PostTitle).AppendLine()
+                    .AppendLine("---")
+                .ToString();
+
+                fileSystem.File.WriteAllText(postPath, postContent, new UTF8Encoding(false));
             }
             else
             {
