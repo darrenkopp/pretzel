@@ -51,6 +51,7 @@ namespace Pretzel.Commands
                 title = title.Replace(c.ToString(), "");
 
             title = title.Replace(".", "");
+            title = title.Replace(" ", "-");
             return title;
         }
 
