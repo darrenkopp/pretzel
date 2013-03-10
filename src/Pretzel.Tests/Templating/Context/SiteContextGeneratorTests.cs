@@ -132,6 +132,65 @@ namespace Pretzel.Tests.Templating.Context
         }
 
         [Fact]
+        public void pages_with_front_matter_do_not_use_convention_to_render_path()
+        {
+            // arrange
+            fileSystem.AddFile(@"C:\TestSite\index.html", new MockFileData("---\nlayout:nil\n---\n# Title"));
+            var outputPath = string.Format("/{0}/{1}", DateTime.Now.ToString("yyyy'/'MM'/'dd"), "index.html");
+
+            // act
+            var siteContext = generator.BuildContext(@"C:\TestSite");
+            var firstPost = siteContext.Pages.First();
+
+            // assert
+            Assert.NotEqual(outputPath, firstPost.Url);
+        }
+
+        [Fact]
+        public void pages_without_front_matter_do_not_use_convention_to_render_path()
+        {
+            // arrange
+            fileSystem.AddFile(@"C:\TestSite\index.html", new MockFileData("# Title"));
+            var outputPath = string.Format("/{0}/{1}", DateTime.Now.ToString("yyyy'/'MM'/'dd"), "index.html");
+
+            // act
+            var siteContext = generator.BuildContext(@"C:\TestSite");
+            var firstPost = siteContext.Pages.First();
+
+            // assert
+            Assert.NotEqual(outputPath, firstPost.Url);
+        }
+
+        [Fact]
+        public void pages_with_date_front_matter_should_be_bound_to_permalink()
+        {
+            // arrange
+            fileSystem.AddFile(@"C:\TestSite\index.html", new MockFileData("---\ndate: 2013-01-03\n---\n# Title"));
+            var outputPath = string.Format("/{0}/{1}", new DateTime(2013, 01, 03).ToString("yyyy'/'MM'/'dd"), "index.html");
+
+            // act
+            var siteContext = generator.BuildContext(@"C:\TestSite");
+            var firstPost = siteContext.Pages.First();
+
+            // assert
+            Assert.Equal(outputPath, firstPost.Url);
+        }
+
+        [Fact]
+        public void pages_without_date_front_matter_render_path_should_match_file_system_path()
+        {
+            // arrange
+            fileSystem.AddFile(@"C:\TestSite\some\path\index.html", new MockFileData("---\nlayout: nil\n---\n# Title"));
+
+            // act
+            var siteContext = generator.BuildContext(@"C:\TestSite");
+            var firstPost = siteContext.Pages.First();
+
+            // assert
+            Assert.Equal("/some/path/index.html", firstPost.Url);
+        }
+
+        [Fact]
         public void site_context_includes_pages_in_same_folder()
         {
             // arrange
@@ -180,7 +239,7 @@ title: Title
 
             Assert.Equal(4, siteContext.Tags.Count());
             Assert.Equal(1, siteContext.Categories.Count());
-            
+
             var tag1 = siteContext.Tags.First(x => x.Name == "tag1");
             Assert.Equal(1, tag1.Posts.Count());
             Assert.Equal(2, tag1.Posts.First().Tags.Count());
@@ -188,13 +247,13 @@ title: Title
 
             var tag2 = siteContext.Tags.First(x => x.Name == "tag2");
             Assert.Equal(2, tag2.Posts.Count());
-            Assert.NotNull(tag2.Posts.FirstOrDefault(x=>x.File.Contains("File1")));
-            Assert.NotNull(tag2.Posts.FirstOrDefault(x=>x.File.Contains("File2")));
-            
+            Assert.NotNull(tag2.Posts.FirstOrDefault(x => x.File.Contains("File1")));
+            Assert.NotNull(tag2.Posts.FirstOrDefault(x => x.File.Contains("File2")));
+
             var tag3 = siteContext.Tags.First(x => x.Name == "tag3");
             Assert.Equal(1, tag3.Posts.Count());
             Assert.True(tag3.Posts.First().File.Contains("File2"));
-            
+
             var tag4 = siteContext.Tags.First(x => x.Name == "tag4");
             Assert.Equal(1, tag4.Posts.Count());
             Assert.Equal(1, tag4.Posts.First().Tags.Count());
@@ -213,7 +272,7 @@ title: Title
 
             Assert.Equal(4, siteContext.Categories.Count());
             Assert.Equal(1, siteContext.Tags.Count());
-            
+
             var cat1 = siteContext.Categories.First(x => x.Name == "cat1");
             Assert.Equal(1, cat1.Posts.Count());
             Assert.Equal(2, cat1.Posts.First().Categories.Count());
@@ -221,8 +280,8 @@ title: Title
 
             var cat2 = siteContext.Categories.First(x => x.Name == "cat2");
             Assert.Equal(2, cat2.Posts.Count());
-            Assert.NotNull(cat2.Posts.FirstOrDefault(x=>x.File.Contains("File1")));
-            Assert.NotNull(cat2.Posts.FirstOrDefault(x=>x.File.Contains("File2")));
+            Assert.NotNull(cat2.Posts.FirstOrDefault(x => x.File.Contains("File1")));
+            Assert.NotNull(cat2.Posts.FirstOrDefault(x => x.File.Contains("File2")));
 
             var cat3 = siteContext.Categories.First(x => x.Name == "cat3");
             Assert.Equal(1, cat3.Posts.Count());

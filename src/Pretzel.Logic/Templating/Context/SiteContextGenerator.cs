@@ -122,7 +122,7 @@ namespace Pretzel.Logic.Templating.Context
                         }
                         else
                         {
-                            tags.Add(tagName, new List<Page> {post});
+                            tags.Add(tagName, new List<Page> { post });
                         }
                     }
                 }
@@ -139,13 +139,13 @@ namespace Pretzel.Logic.Templating.Context
                         {
                             categories.Add(catName, new List<Page> { post });
                         }
-                    }  
+                    }
                 }
-                
+
             }
 
             context.Tags = tags.Select(x => new Tag { Name = x.Key, Posts = x.Value }).OrderBy(x => x.Name).ToList();
-            context.Categories = categories.Select(x => new Category { Name = x.Key, Posts = x.Value }).OrderBy(x=>x.Name).ToList();
+            context.Categories = categories.Select(x => new Category { Name = x.Key, Posts = x.Value }).OrderBy(x => x.Name).ToList();
         }
 
         private bool ContainsYamlFrontMatter(string file)
@@ -185,11 +185,34 @@ namespace Pretzel.Logic.Templating.Context
                                 };
 
                 if (header.ContainsKey("permalink"))
+                {
+                    // use explicit permalink
                     page.Url = EvaluatePermalink(header["permalink"].ToString(), page);
+                }
                 else if (config.ContainsKey("permalink"))
                 {
-                    page.Url = EvaluatePermalink(config["permalink"].ToString(), page);
-                    page.Bag.Add("permalink", config["permalink"].ToString());
+                    var permalink = config["permalink"].ToString();
+                    if (isPost)
+                    {
+                        // always evaluate permalink for posts
+                        page.Url = EvaluatePermalink(permalink, page);
+                        page.Bag.Add("permalink", permalink);
+                    }
+                    else if (header.ContainsKey("date"))
+                    {
+                        // attempt to 
+                        var date = DateTime.Parse(header["date"].ToString());
+                        page.Url = new PermalinkParameters(GetTitle(page.File), date, null).Bind(permalink);
+                        page.Bag.Add("permalink", page.Url);
+                    }
+                    else
+                    {
+                        var basePath = page.File.Replace(context.SourceFolder, "");
+                        var pathParts = basePath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
+
+                        page.Url = "/" + string.Join("/", pathParts);
+                        page.Bag.Add("permalink", page.Url);
+                    }
                 }
 
                 // The GetDirectoryPage method is reentrant, we need a cache to stop a stack overflow :)
@@ -352,7 +375,46 @@ namespace Pretzel.Logic.Templating.Context
         }
         private string GetPageTitle(string file)
         {
-			  return Path.GetFileNameWithoutExtension(file);
+            return Path.GetFileNameWithoutExtension(file);
+        }
+
+        struct PermalinkParameters
+        {
+            readonly string Title;
+            readonly DateTime? Date;
+            readonly IEnumerable<string> Categories;
+
+            public PermalinkParameters(string title, DateTime? date, IEnumerable<string> categories)
+            {
+                Title = title;
+                Date = date;
+                Categories = categories;
+            }
+
+            public string Bind(string permalink)
+            {
+                if (Date == null && (HasToken(":year", permalink) || HasToken(":month", permalink) || HasToken(":day", permalink) || HasToken(":i_day", permalink) || HasToken(":i_month", permalink)))
+                    throw new ArgumentException("There is no date value to bind to the permalink template.", "permalink");
+
+                if (Date.HasValue)
+                {
+                    permalink = permalink.Replace(":year", Date.Value.Year.ToString(CultureInfo.InvariantCulture));
+                    permalink = permalink.Replace(":month", Date.Value.ToString("MM"));
+                    permalink = permalink.Replace(":day", Date.Value.ToString("dd"));
+                    permalink = permalink.Replace(":i_month", Date.Value.ToString("M"));
+                    permalink = permalink.Replace(":i_day", Date.Value.ToString("d"));
+                }
+
+                permalink = permalink.Replace(":title", Title);
+                // TODO: category support
+
+                return permalink;
+            }
+
+            static bool HasToken(string token, string template)
+            {
+                return template.IndexOf(token, StringComparison.CurrentCultureIgnoreCase) != -1;
+            }
         }
     }
 }
